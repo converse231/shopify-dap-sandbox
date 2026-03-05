@@ -1,0 +1,630 @@
+{% liquid
+  assign slide_count = section.blocks.size
+  assign carousel_id = 'street-hero-carousel-' | append: section.id
+  assign autoplay = section.settings.enable_autoplay
+  assign autoplay_speed = section.settings.autoplay_speed | times: 1000
+  assign show_arrows = section.settings.show_navigation_arrows
+  assign show_dots = section.settings.show_pagination_dots
+  assign fetch_priority = 'auto'
+  if section.index == 1 and section.blocks.first.settings.image != blank
+    assign fetch_priority = 'high'
+  endif
+%}
+
+<section
+  id="{{ carousel_id }}"
+  class="street-hero-carousel color-{{ section.settings.color_scheme }}"
+  style="--street-hero-slide-count: {{ slide_count }};"
+  data-height="{{ section.settings.section_height }}"
+  data-autoplay="{{ autoplay }}"
+  data-autoplay-speed="{{ autoplay_speed }}"
+  data-slide-count="{{ slide_count }}"
+  aria-label="{{ 'sections.carousel.carousel' | t | default: 'Image carousel' }}"
+>
+  <div class="street-hero-carousel__track-wrapper">
+    <ul class="street-hero-carousel__track" role="list">
+      {% for block in section.blocks %}
+        <li
+          class="street-hero-carousel__slide{% if forloop.first %} street-hero-carousel__slide--active{% endif %}"
+          data-slide-index="{{ forloop.index0 }}"
+          {{ block.shopify_attributes }}
+          role="group"
+          aria-roledescription="slide"
+          aria-label="{{ forloop.index }} {{ 'sections.carousel.of' | t | default: 'of' }} {{ slide_count }}"
+        >
+          <div class="street-hero-carousel__slide-inner street-hero-carousel__slide-inner--{{ block.settings.text_alignment }}">
+            <div
+              class="street-hero-carousel__media"
+              style="--overlay-opacity: {{ block.settings.overlay_opacity | divided_by: 100.0 }};"
+            >
+              {% if block.settings.image != blank %}
+                {{
+                  block.settings.image
+                  | image_url: width: 3840
+                  | image_tag:
+                    loading: forloop.first and section.index == 1 ? 'eager' : 'lazy',
+                    fetchpriority: forloop.first and section.index == 1 ? 'high' : nil,
+                    widths: '832, 1200, 1600, 1920, 2560, 3840',
+                    sizes: '100vw',
+                    alt: block.settings.image.alt | default: block.settings.hero_heading,
+                    class: 'street-hero-carousel__image'
+                }}
+              {% else %}
+                {{ 'lifestyle-1' | placeholder_svg_tag: 'street-hero-carousel__image street-hero-carousel__placeholder' }}
+              {% endif %}
+              <span class="street-hero-carousel__overlay" aria-hidden="true"></span>
+            </div>
+
+            <div class="street-hero-carousel__content">
+              {% if block.settings.hero_heading != blank %}
+                <h2 class="street-hero-carousel__heading">
+                  {{ block.settings.hero_heading }}
+                </h2>
+              {% endif %}
+              {% if block.settings.hero_description != blank %}
+                <p class="street-hero-carousel__description">
+                  {{ block.settings.hero_description }}
+                </p>
+              {% endif %}
+              {% if block.settings.button_label != blank and block.settings.button_link != blank %}
+                <a
+                  href="{{ block.settings.button_link }}"
+                  class="street-hero-carousel__cta button"
+                >
+                  {{ block.settings.button_label }}
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {% if show_arrows and slide_count > 1 %}
+    <button
+      type="button"
+      class="street-hero-carousel__arrow street-hero-carousel__arrow--prev"
+      aria-label="{{ 'sections.carousel.previous' | t | default: 'Previous slide' }}"
+      data-direction="prev"
+    >
+      <span aria-hidden="true">{{ 'icon-chevron-left.svg' | inline_asset_content }}</span>
+    </button>
+    <button
+      type="button"
+      class="street-hero-carousel__arrow street-hero-carousel__arrow--next"
+      aria-label="{{ 'sections.carousel.next' | t | default: 'Next slide' }}"
+      data-direction="next"
+    >
+      <span aria-hidden="true">{{ 'icon-chevron-right.svg' | inline_asset_content }}</span>
+    </button>
+  {% endif %}
+
+  {% if show_dots and slide_count > 1 %}
+    <div class="street-hero-carousel__dots" role="tablist" aria-label="{{ 'sections.carousel.slide_navigation' | t | default: 'Slide navigation' }}">
+      {% for block in section.blocks %}
+        <button
+          type="button"
+          class="street-hero-carousel__dot{% if forloop.first %} street-hero-carousel__dot--active{% endif %}"
+          role="tab"
+          aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+          aria-label="{{ 'sections.carousel.slide' | t | default: 'Slide' }} {{ forloop.index }}"
+          data-slide-index="{{ forloop.index0 }}"
+        >
+          <span class="visually-hidden">{{ forloop.index }}</span>
+        </button>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+{% stylesheet %}
+  .street-hero-carousel {
+    --street-hero-height: 500px;
+    position: relative;
+    overflow: hidden;
+    min-height: var(--street-hero-height);
+  }
+
+  .street-hero-carousel[data-height="medium"] {
+    --street-hero-height: 650px;
+  }
+
+  .street-hero-carousel[data-height="large"] {
+    --street-hero-height: 800px;
+  }
+
+  .street-hero-carousel[data-height="full"] {
+    --street-hero-height: 100vh;
+  }
+
+  .street-hero-carousel__track-wrapper {
+    position: relative;
+    width: 100%;
+    height: var(--street-hero-height);
+  }
+
+  .street-hero-carousel__track {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    height: 100%;
+    width: calc(100% * var(--street-hero-slide-count, 1));
+    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .street-hero-carousel__slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+  }
+
+  .street-hero-carousel__slide:not(.street-hero-carousel__slide--active) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .street-hero-carousel__slide-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: clamp(24px, 4vw, 64px);
+  }
+
+  .street-hero-carousel__slide-inner--center {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .street-hero-carousel__slide-inner--right {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .street-hero-carousel__media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .street-hero-carousel__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    display: block;
+  }
+
+  .street-hero-carousel__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, var(--overlay-opacity, 0.4));
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .street-hero-carousel__content {
+    position: relative;
+    z-index: 2;
+    max-width: 640px;
+  }
+
+  .street-hero-carousel__slide-inner--center .street-hero-carousel__content {
+    max-width: 720px;
+  }
+
+  .street-hero-carousel__heading {
+    font-size: clamp(36px, 6vw, 80px);
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin: 0 0 0.5em;
+    color: rgb(var(--color-foreground));
+  }
+
+  .street-hero-carousel__description {
+    font-size: clamp(14px, 2vw, 18px);
+    line-height: 1.5;
+    margin: 0 0 1.5em;
+    letter-spacing: 0.02em;
+    color: rgb(var(--color-foreground));
+    opacity: 0.9;
+  }
+
+  .street-hero-carousel__cta {
+    display: inline-block;
+    padding: 14px 32px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 2px solid rgb(var(--color-foreground));
+    background: transparent;
+    color: rgb(var(--color-foreground));
+    cursor: pointer;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  .street-hero-carousel__cta:hover {
+    background: rgb(var(--color-foreground));
+    color: rgb(var(--color-background));
+  }
+
+  .street-hero-carousel__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 2px solid rgb(var(--color-foreground));
+    background: rgba(0, 0, 0, 0.3);
+    color: rgb(var(--color-foreground));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.25s ease;
+  }
+
+  .street-hero-carousel__arrow:hover {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .street-hero-carousel__arrow:focus-visible {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+
+  .street-hero-carousel__arrow--prev {
+    left: 16px;
+  }
+
+  .street-hero-carousel__arrow--next {
+    right: 16px;
+  }
+
+  .street-hero-carousel__arrow svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .street-hero-carousel__dots {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .street-hero-carousel__dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 2px solid rgb(var(--color-foreground));
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.25s ease;
+  }
+
+  .street-hero-carousel__dot--active,
+  .street-hero-carousel__dot:hover {
+    background: rgb(var(--color-foreground));
+  }
+
+  .street-hero-carousel__dot:focus-visible {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media screen and (max-width: 749px) {
+    .street-hero-carousel {
+      --street-hero-height: 400px;
+    }
+
+    .street-hero-carousel[data-height="medium"] {
+      --street-hero-height: 500px;
+    }
+
+    .street-hero-carousel[data-height="large"] {
+      --street-hero-height: 600px;
+    }
+
+    .street-hero-carousel[data-height="full"] {
+      --street-hero-height: 100vh;
+    }
+
+    .street-hero-carousel__slide-inner,
+    .street-hero-carousel__slide-inner--left,
+    .street-hero-carousel__slide-inner--right {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .street-hero-carousel__content {
+      max-width: 100%;
+    }
+
+    .street-hero-carousel__arrow {
+      width: 40px;
+      height: 40px;
+    }
+
+    .street-hero-carousel__arrow--prev {
+      left: 8px;
+    }
+
+    .street-hero-carousel__arrow--next {
+      right: 8px;
+    }
+
+    .street-hero-carousel__dots {
+      bottom: 16px;
+    }
+  }
+{% endstylesheet %}
+
+<script>
+  (function () {
+    const section = document.getElementById('{{ carousel_id }}');
+    if (!section || {{ slide_count }} <= 0) return;
+
+    const track = section.querySelector('.street-hero-carousel__track');
+    const slides = section.querySelectorAll('.street-hero-carousel__slide');
+    const prevBtn = section.querySelector('[data-direction="prev"]');
+    const nextBtn = section.querySelector('[data-direction="next"]');
+    const dots = section.querySelectorAll('.street-hero-carousel__dot');
+    const autoplay = section.dataset.autoplay === 'true';
+    const autoplaySpeed = parseInt(section.dataset.autoplaySpeed, 10) || 5000;
+    let currentIndex = 0;
+    let autoplayTimer = null;
+
+    function goToSlide(index) {
+      const count = slides.length;
+      currentIndex = ((index % count) + count) % count;
+      slides.forEach((s, i) => s.classList.toggle('street-hero-carousel__slide--active', i === currentIndex));
+      dots.forEach((d, i) => {
+        d.classList.toggle('street-hero-carousel__dot--active', i === currentIndex);
+        d.setAttribute('aria-selected', i === currentIndex ? 'true' : 'false');
+      });
+      track.style.transform = 'translateX(-' + currentIndex * 100 + '%)';
+    }
+
+    function next() {
+      goToSlide(currentIndex + 1);
+    }
+
+    function prev() {
+      goToSlide(currentIndex - 1);
+    }
+
+    function startAutoplay() {
+      stopAutoplay();
+      if (autoplay && slides.length > 1) {
+        autoplayTimer = setInterval(next, autoplaySpeed);
+      }
+    }
+
+    function stopAutoplay() {
+      if (autoplayTimer) {
+        clearInterval(autoplayTimer);
+        autoplayTimer = null;
+      }
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function () {
+        prev();
+        startAutoplay();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function () {
+        next();
+        startAutoplay();
+      });
+    }
+
+    dots.forEach(function (dot, index) {
+      dot.addEventListener('click', function () {
+        goToSlide(index);
+        startAutoplay();
+      });
+      dot.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          goToSlide(index);
+          startAutoplay();
+        }
+      });
+    });
+
+    section.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prev();
+        startAutoplay();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        next();
+        startAutoplay();
+      }
+    });
+
+    section.addEventListener('mouseenter', stopAutoplay);
+    section.addEventListener('mouseleave', startAutoplay);
+    section.addEventListener('focusin', stopAutoplay);
+    section.addEventListener('focusout', startAutoplay);
+
+    track.style.transform = 'translateX(0)';
+    startAutoplay();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Street Hero Carousel",
+  "tag": "section",
+  "class": "section street-hero-carousel-section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "select",
+      "id": "section_height",
+      "label": "Section height",
+      "options": [
+        { "value": "small", "label": "Small (500px)" },
+        { "value": "medium", "label": "Medium (650px)" },
+        { "value": "large", "label": "Large (800px)" },
+        { "value": "full", "label": "Full screen" }
+      ],
+      "default": "large"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_autoplay",
+      "label": "Enable autoplay",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "autoplay_speed",
+      "label": "Autoplay speed (seconds)",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "default": 5,
+      "unit": "s"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_navigation_arrows",
+      "label": "Show navigation arrows",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_pagination_dots",
+      "label": "Show pagination dots",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "Slide",
+      "limit": 8,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Background image"
+        },
+        {
+          "type": "text",
+          "id": "hero_heading",
+          "label": "Heading",
+          "default": "NEW DROP"
+        },
+        {
+          "type": "textarea",
+          "id": "hero_description",
+          "label": "Description",
+          "default": "Limited collection. Bold statement."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button label"
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Button link"
+        },
+        {
+          "type": "select",
+          "id": "text_alignment",
+          "label": "Text alignment",
+          "options": [
+            { "value": "left", "label": "Left" },
+            { "value": "center", "label": "Center" },
+            { "value": "right", "label": "Right" }
+          ],
+          "default": "left"
+        },
+        {
+          "type": "range",
+          "id": "overlay_opacity",
+          "label": "Overlay opacity",
+          "min": 0,
+          "max": 70,
+          "step": 5,
+          "default": 40,
+          "unit": "%"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Street Hero Carousel",
+      "category": "Image",
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": {
+            "hero_heading": "NEW DROP",
+            "hero_description": "Limited collection. Bold statement.",
+            "button_label": "Shop now",
+            "text_alignment": "left",
+            "overlay_opacity": 40
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "hero_heading": "STREET CULTURE",
+            "hero_description": "Where style meets attitude.",
+            "text_alignment": "center",
+            "overlay_opacity": 50
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
