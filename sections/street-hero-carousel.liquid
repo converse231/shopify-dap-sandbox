@@ -31,8 +31,8 @@
         >
           <div class="street-hero-carousel__slide-inner street-hero-carousel__slide-inner--{{ block.settings.text_alignment }}">
             <div
-              class="street-hero-carousel__media"
-              style="--overlay-opacity: {{ block.settings.overlay_opacity | divided_by: 100.0 }}; --image-position: {{ block.settings.image_alignment | replace: '_', ' ' }};"
+              class="street-hero-carousel__media{% if block.settings.image_fit == 'contain' %} street-hero-carousel__media--contain{% endif %}"
+              style="--overlay-opacity: {{ block.settings.overlay_opacity | divided_by: 100.0 }}; --image-position: {{ block.settings.image_alignment | replace: '_', ' ' }}; --image-fit: {{ block.settings.image_fit }};"
             >
               {% if block.settings.image != blank %}
                 {% liquid
@@ -179,6 +179,7 @@
     align-items: center;
     justify-content: flex-start;
     padding: clamp(24px, 4vw, 64px);
+    box-sizing: border-box;
   }
 
   .street-hero-carousel__slide-inner--center {
@@ -200,9 +201,13 @@
   .street-hero-carousel__image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: var(--image-fit, cover);
     object-position: var(--image-position, center);
     display: block;
+  }
+
+  .street-hero-carousel__media--contain .street-hero-carousel__image {
+    background: rgba(0, 0, 0, 0.15);
   }
 
   .street-hero-carousel__overlay {
@@ -216,11 +221,14 @@
   .street-hero-carousel__content {
     position: relative;
     z-index: 2;
-    max-width: 640px;
+    width: 100%;
+    min-width: 0;
+    max-width: min(640px, 100%);
+    box-sizing: border-box;
   }
 
   .street-hero-carousel__slide-inner--center .street-hero-carousel__content {
-    max-width: 720px;
+    max-width: min(720px, 100%);
   }
 
   .street-hero-carousel__heading {
@@ -231,6 +239,9 @@
     line-height: 1.1;
     margin: 0 0 0.5em;
     color: rgb(var(--color-foreground));
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
   }
 
   .street-hero-carousel__description {
@@ -560,9 +571,20 @@
         },
         {
           "type": "select",
+          "id": "image_fit",
+          "label": "Image fit",
+          "info": "Cover fills the area and crops edges. Contain shows the full image (may add dark bands).",
+          "options": [
+            { "value": "cover", "label": "Cover (fill, crop)" },
+            { "value": "contain", "label": "Contain (show full image)" }
+          ],
+          "default": "cover"
+        },
+        {
+          "type": "select",
           "id": "image_alignment",
           "label": "Image alignment",
-          "info": "Choose which part of the image stays in frame when cropped (e.g. keep subject visible).",
+          "info": "With Cover, choose which part stays in frame. With Contain, where the image sits.",
           "options": [
             { "value": "center", "label": "Center" },
             { "value": "top", "label": "Top" },
