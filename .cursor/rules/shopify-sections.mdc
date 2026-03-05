@@ -1,0 +1,148 @@
+---
+description: Conventions for building custom Shopify sections and blocks in the Horizon theme sandbox
+alwaysApply: true
+---
+
+# Shopify Section & Block Development — Horizon Theme
+
+## Section Structure
+
+Always use the capture-children-then-render pattern with `snippets/section.liquid`:
+
+```liquid
+{% capture children %}
+  {% content_for 'blocks' %}
+{% endcapture %}
+
+{% render 'section', section: section, children: children %}
+```
+
+For fixed-structure sections with named slots, use typed block references:
+
+```liquid
+{% capture media %}
+  {% content_for 'block', type: '_media', id: 'static-media' %}
+{% endcapture %}
+{% capture content %}
+  {% content_for 'block', type: '_content', id: 'static-content' %}
+{% endcapture %}
+```
+
+## Block-First Architecture
+
+- Every piece of merchant-editable content MUST be a block, not hardcoded HTML.
+- Use `@theme` and `@app` in the blocks array for theme and app blocks.
+- Prefix internal-only blocks (not directly added by merchants) with `_` (e.g. `_card`, `_heading`).
+- Use the `group` block type for nested container layouts — it renders via `snippets/group.liquid`.
+- Blocks delegate rendering to snippets: `{% render 'text', block: block %}`, `{% render 'button', ... %}`.
+
+## Schema Conventions
+
+### Section Settings Order
+
+Group settings under these headers in this order:
+
+1. `"content": "t:content.layout"` — direction, alignment, gap
+2. `"content": "t:content.size"` — section_width, section_height
+3. `"content": "t:content.appearance"` — color_scheme, background_media, borders, overlay
+4. `"content": "t:content.padding"` — padding-block-start, padding-block-end
+
+### Setting Best Practices
+
+- Use translation keys for all labels: `"label": "t:settings.color_scheme"`
+- Use `visible_if` to hide conditional settings: `"visible_if": "{{ section.settings.border != 'none' }}"`
+- Keep settings minimal — only expose what the merchant truly needs to customize.
+- Prefer `color_scheme` (type: `color_scheme`) over raw color pickers.
+- Use `range` for padding (0–100, step 1, unit px) and gap.
+- Use `select` for layout choices (direction, alignment, width).
+- Use `richtext` for editable content blocks.
+
+### Presets
+
+Always include at least one preset with sensible defaults and a `block_order`:
+
+```json
+"presets": [
+  {
+    "name": "t:names.my_section",
+    "category": "t:categories.text",
+    "blocks": { ... },
+    "block_order": ["heading", "text", "button"],
+    "settings": {
+      "section_height": "small",
+      "padding-block-start": 48,
+      "padding-block-end": 48
+    }
+  }
+]
+```
+
+## Liquid Best Practices
+
+- Use `{% liquid %}` for multi-line logic (assign, if, for).
+- Use `#` comments inside `{% liquid %}` blocks, not HTML comments.
+- Use `{% render %}` — never `{% include %}`.
+- Scope all variables with `assign` or `capture`.
+- Use `{{ 'key' | t }}` for user-facing strings.
+- Use `{%- -%}` whitespace-trimming tags where output cleanliness matters.
+- For images, use `image_url` + `image_tag` with `widths` and `sizes` attributes.
+- Use `placeholder_svg_tag` for empty image states.
+
+## CSS & Styling
+
+- Use `{% stylesheet %}` blocks inside sections for section-specific CSS.
+- NEVER use inline hex colors or hardcoded font families — always use CSS variables.
+- Apply color schemes via class: `color-{{ section.settings.color_scheme }}`.
+- Use existing layout classes: `layout-panel-flex`, `layout-panel-flex--row`, `layout-panel-flex--column`, `spacing-style`, `section--page-width`, `section--full-width`, `mobile-column`.
+- Use theme CSS variables for colors (`--color-background`, `--color-foreground`, `--color-primary`), fonts (`--font-body--family`, `--font-heading--family`), spacing (`--margin-*`, `--padding-*`, `--gap-*`), and animation (`--animation-speed`, `--ease-out-cubic`).
+- Use BEM-like naming for custom classes: `.my-section`, `.my-section__element`, `.my-section--modifier`.
+
+## Key Snippets to Reuse
+
+| Snippet | Purpose | Usage |
+|---------|---------|-------|
+| `section` | Full section wrapper (background, layout, overlay) | `{% render 'section', section: section, children: children %}` |
+| `group` | Block container with flex layout | `{% render 'group', children: children, settings: block.settings %}` |
+| `spacing-style` | Responsive padding CSS vars | `style="{% render 'spacing-style', settings: section.settings %}"` |
+| `layout-panel-style` | Flex direction, alignment, gap | `style="{% render 'layout-panel-style', settings: section.settings %}"` |
+| `gap-style` | Gap CSS variable | `{% render 'gap-style', value: 12 %}` |
+| `size-style` | Width/height CSS vars | `style="{% render 'size-style', settings: block.settings %}"` |
+| `border-override` | Border styling | `style="{% render 'border-override', settings: section.settings %}"` |
+| `background-media` | Background image/video | `{% render 'background-media', background_media: settings.background_media, ... %}` |
+| `overlay` | Section/block overlay | `{% render 'overlay', settings: section.settings, layer: '0' %}` |
+| `text` | Text block rendering | `{% render 'text', block: block %}` |
+| `button` | Button rendering | `{% render 'button', link: block.settings.link, ... %}` |
+| `image` | Image rendering | See `snippets/image.liquid` for params |
+
+## Standard Section Settings Template (Copy-Paste)
+
+```json
+"settings": [
+  { "type": "header", "content": "t:content.layout" },
+  { "type": "select", "id": "content_direction", "label": "t:settings.direction",
+    "options": [
+      { "value": "column", "label": "t:options.vertical" },
+      { "value": "row", "label": "t:options.horizontal" }
+    ], "default": "column" },
+  { "type": "checkbox", "id": "vertical_on_mobile", "label": "t:settings.vertical_on_mobile", "default": true,
+    "visible_if": "{{ section.settings.content_direction == 'row' }}" },
+  { "type": "range", "id": "gap", "label": "t:settings.gap", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 12 },
+  { "type": "header", "content": "t:content.size" },
+  { "type": "select", "id": "section_width", "label": "t:settings.width",
+    "options": [
+      { "value": "page-width", "label": "t:options.page" },
+      { "value": "full-width", "label": "t:options.full" }
+    ], "default": "page-width" },
+  { "type": "header", "content": "t:content.appearance" },
+  { "type": "color_scheme", "id": "color_scheme", "label": "t:settings.color_scheme", "default": "scheme-1" },
+  { "type": "header", "content": "t:content.padding" },
+  { "type": "range", "id": "padding-block-start", "label": "t:settings.top", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 48 },
+  { "type": "range", "id": "padding-block-end", "label": "t:settings.bottom", "min": 0, "max": 100, "step": 1, "unit": "px", "default": 48 }
+]
+```
+
+## File Naming
+
+- Sections: `sections/my-section.liquid` (kebab-case)
+- Blocks: `blocks/my-block.liquid` (kebab-case), `blocks/_internal-block.liquid` (underscore prefix for internal)
+- Snippets: `snippets/my-snippet.liquid` (kebab-case)
