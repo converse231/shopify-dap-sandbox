@@ -5,10 +5,6 @@
   assign autoplay_speed = section.settings.autoplay_speed | times: 1000
   assign show_arrows = section.settings.show_navigation_arrows
   assign show_dots = section.settings.show_pagination_dots
-  assign fetch_priority = 'auto'
-  if section.index == 1 and section.blocks.first.settings.image != blank
-    assign fetch_priority = 'high'
-  endif
 %}
 
 <section
@@ -19,7 +15,8 @@
   data-autoplay="{{ autoplay }}"
   data-autoplay-speed="{{ autoplay_speed }}"
   data-slide-count="{{ slide_count }}"
-  aria-label="{{ 'sections.carousel.carousel' | t | default: 'Image carousel' }}"
+  aria-label="{{ 'accessibility.slideshow' | t }}"
+  {% if slide_count > 1 %}tabindex="0"{% endif %}
 >
   <div class="street-hero-carousel__track-wrapper">
     <ul class="street-hero-carousel__track" role="list">
@@ -30,7 +27,7 @@
           {{ block.shopify_attributes }}
           role="group"
           aria-roledescription="slide"
-          aria-label="{{ forloop.index }} {{ 'sections.carousel.of' | t | default: 'of' }} {{ slide_count }}"
+          aria-label="{{ 'accessibility.slide_status' | t: index: forloop.index, length: slide_count }}"
         >
           <div class="street-hero-carousel__slide-inner street-hero-carousel__slide-inner--{{ block.settings.text_alignment }}">
             <div
@@ -38,12 +35,20 @@
               style="--overlay-opacity: {{ block.settings.overlay_opacity | divided_by: 100.0 }};"
             >
               {% if block.settings.image != blank %}
+                {% liquid
+                  assign img_loading = 'lazy'
+                  assign img_fetchpriority = 'auto'
+                  if forloop.first and section.index == 1
+                    assign img_loading = 'eager'
+                    assign img_fetchpriority = 'high'
+                  endif
+                %}
                 {{
                   block.settings.image
                   | image_url: width: 3840
                   | image_tag:
-                    loading: forloop.first and section.index == 1 ? 'eager' : 'lazy',
-                    fetchpriority: forloop.first and section.index == 1 ? 'high' : nil,
+                    loading: img_loading,
+                    fetchpriority: img_fetchpriority,
                     widths: '832, 1200, 1600, 1920, 2560, 3840',
                     sizes: '100vw',
                     alt: block.settings.image.alt | default: block.settings.hero_heading,
@@ -85,7 +90,7 @@
     <button
       type="button"
       class="street-hero-carousel__arrow street-hero-carousel__arrow--prev"
-      aria-label="{{ 'sections.carousel.previous' | t | default: 'Previous slide' }}"
+      aria-label="{{ 'accessibility.slideshow_previous' | t }}"
       data-direction="prev"
     >
       <span aria-hidden="true">{{ 'icon-chevron-left.svg' | inline_asset_content }}</span>
@@ -93,7 +98,7 @@
     <button
       type="button"
       class="street-hero-carousel__arrow street-hero-carousel__arrow--next"
-      aria-label="{{ 'sections.carousel.next' | t | default: 'Next slide' }}"
+      aria-label="{{ 'accessibility.slideshow_next' | t }}"
       data-direction="next"
     >
       <span aria-hidden="true">{{ 'icon-chevron-right.svg' | inline_asset_content }}</span>
@@ -101,14 +106,14 @@
   {% endif %}
 
   {% if show_dots and slide_count > 1 %}
-    <div class="street-hero-carousel__dots" role="tablist" aria-label="{{ 'sections.carousel.slide_navigation' | t | default: 'Slide navigation' }}">
+    <div class="street-hero-carousel__dots" role="tablist" aria-label="{{ 'accessibility.slideshow' | t }}">
       {% for block in section.blocks %}
         <button
           type="button"
           class="street-hero-carousel__dot{% if forloop.first %} street-hero-carousel__dot--active{% endif %}"
           role="tab"
           aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
-          aria-label="{{ 'sections.carousel.slide' | t | default: 'Slide' }} {{ forloop.index }}"
+          aria-label="{{ 'accessibility.slide_status' | t: index: forloop.index, length: slide_count }}"
           data-slide-index="{{ forloop.index0 }}"
         >
           <span class="visually-hidden">{{ forloop.index }}</span>
