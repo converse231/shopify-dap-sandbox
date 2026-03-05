@@ -42,6 +42,14 @@
                     assign img_loading = 'eager'
                     assign img_fetchpriority = 'high'
                   endif
+                  assign img_fit = block.settings.image_fit
+                  if img_fit == blank
+                    assign img_fit = 'cover'
+                  endif
+                  assign img_pos = block.settings.image_alignment | replace: '_', ' '
+                  if img_pos == blank
+                    assign img_pos = 'center'
+                  endif
                 %}
                 {{
                   block.settings.image
@@ -52,7 +60,8 @@
                     widths: '832, 1200, 1600, 1920, 2560, 3840',
                     sizes: '100vw',
                     alt: block.settings.image.alt | default: block.settings.hero_heading,
-                    class: 'street-hero-carousel__image'
+                    class: 'street-hero-carousel__image',
+                    style: 'object-fit: ' | append: img_fit | append: '; object-position: ' | append: img_pos | append: ';'
                 }}
               {% else %}
                 {{ 'lifestyle-1' | placeholder_svg_tag: 'street-hero-carousel__image street-hero-carousel__placeholder' }}
